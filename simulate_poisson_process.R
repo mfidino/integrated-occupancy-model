@@ -83,7 +83,7 @@ names(plane) <- 'x'
 sp_pres <- gen_process(
 	rast = plane,
 	beta = matrix(
-		c(6,-0.75),
+		c(6,1),
 		ncol = 2,
 		nrow = 1,
 		byrow=TRUE
@@ -115,8 +115,8 @@ if(do_plots){
 #  absence data.
 
 # make a detection covariate that influences presonce only detection
-w_cov <- 0.5 * gen_mvn(plane,c(0.7,0.8), c(0.2,0.3), 0.2) +
-  0.5 * gen_mvn(plane, c(0.1,0.3), c(0.2,0.3), 0.4)
+w_cov <- gen_mvn(plane,c(0.7,0.8), c(0.2,0.3), 0.2) 
+
 
 # add this to the raster
 temp <- blank
@@ -125,7 +125,7 @@ names(temp) <- "det"
 plane <- addLayer(plane, temp)
 
 # detection linear predictor for thinned Poisson process
-beta_det <- c(1, 3)
+beta_det <- c(-0.75, 1.5)
 
 # sample presence only from the true latent state
 #
@@ -157,7 +157,7 @@ if(do_plots){
 # modify this based on size of your study
 #  a larger agg factor will result in
 #  fewer cells in the analysis 
-agg_factor <- 30
+agg_factor <- 15
 agg_plane <- raster::aggregate(
 	plane,
 	fact = agg_factor
@@ -286,7 +286,7 @@ m1 <- run.jags(
 	inits = inits_pa, 
 	monitor = c("beta", "a", "zsum"), 
 	adapt = 1000, 
-	burnin = 50000, 
+	burnin = 20000, 
 	sample = 10000,
 	thin = 2,
 	method = 'parallel',
@@ -341,9 +341,9 @@ m2 <- run.jags(
   inits = inits, 
   monitor = c("beta", "cc", "a", "zsum"), 
   adapt = 1000, 
-  burnin = 50000, 
+  burnin = 20000, 
   sample = 20000,
-  thin = 3,
+  thin = 2,
   modules = "glm",
   method = 'parallel'
 )
