@@ -7,6 +7,7 @@
 ##############################################
 
 # load the plotting and simulating functions
+#  in the utilities folder of this repository
 lapply(
   list.files(
     "./utilities/",
@@ -364,20 +365,20 @@ pamm_ci <- apply(pamm, 2, quantile, probs = c(0.025,0.5, 0.975))
 # do the same for the integrated model
 intmm <- as.matrix(as.mcmc.list(m2), chains = TRUE)[,-1]
 intmm_ci <- apply(intmm, 2, quantile, probs = c(0.025,0.5, 0.975))
-windows(4,4)
-tiff("model_comparison.tiff", height = 4, width = 4, units = "in",
-		 res = 300, compression = "lzw")
+
+jpeg("iocm02.jpeg", height = 4, width = 6, units = "in",
+		 res = 300)
 par(mar = c(2,4,1,1))
-plot(1~1, bty = "l", ylim = c(0, 20), xlim = c(0.5,2.5), type = "n",
+plot(1~1, bty = "l", ylim = c(0, 8), xlim = c(0.5,2.5), type = "n",
 		 xlab = "", ylab = "", xaxt = "n", yaxt = "n")
 
 axis(1, at = seq(1, 2, 1), labels = F, tck = -0.025)
 mtext(c("Intercept", "Slope"), 1, line = 0.6, at = c(1,2), cex = 1.5)
 
-axis(2, at = seq(0,20,1), labels = F, tck = -0.025)
-axis(2, at = seq(0,20,1/2), labels = F, tck = -0.025/2)
-mtext(text = seq(0,20,1),2, line = 0.75, las = 1, at = seq(0,7,1))
-mtext("Estimate", 2, line = 2, at = mean(c(0,7)), cex = 1.5)
+axis(2, at = seq(0,8,1), labels = F, tck = -0.025)
+axis(2, at = seq(0,8,1/2), labels = F, tck = -0.025/2)
+mtext(text = seq(0,8,1),2, line = 0.75, las = 1, at = seq(0,8,1))
+mtext("Estimate", 2, line = 2, at = mean(c(0,8)), cex = 1.5)
 
 lines(x = c(0,1.5), y = c(6,6), lty = 3, lwd = 3)
 my_vioplot(pamm[,1], add = TRUE, wex = 0.3, at = 0.75, 
@@ -385,17 +386,78 @@ my_vioplot(pamm[,1], add = TRUE, wex = 0.3, at = 0.75,
 my_vioplot(intmm[,1], add = TRUE, wex = 0.3, at = 1.25, 
 					 col = scales::alpha("#7e7F8B", 0.4))
 
-lines(x = c(1.5,3), y = c(-0.75,-0.75), lty = 6, lwd = 3)
+lines(x = c(1.5,3), y = c(1,1), lty = 6, lwd = 3)
 
 my_vioplot(pamm[,2], add = TRUE, wex = 0.3, at = 1.75, 
 					 col = scales::alpha("#FF7E00", 0.4))
 my_vioplot(intmm[,2], add = TRUE, wex = 0.3, at = 2.25, 
 					 col = scales::alpha("#7e7F8B", 0.4))
 
-legend("topright", legend = c("PA", "PA & PO"), 
+legend("topright", legend = c("Standard", "Integrated"), 
 			 col = c(scales::alpha("#FF7E00",0.4),scales::alpha("#7e7F8B",0.4)),
-			 				lty = 1, lwd = 7 , bty = "n", title = "Model")
+			 				lty = 1, lwd = 7 , bty = "n", title = "Occupancy Model",
+			 y.intersp = 1.5)
 dev.off()
+
+
+my_vals <- c(6,1,-0.75, 1.5, log(0.3/0.7))
+
+mcmcplots::caterplot(
+  m2, regex = c("beta|cc|a"),
+  reorder = FALSE,
+  cex = 1.2
+)
+mtext("Model estimate", 1, 3,cex = 2)
+points(y = rev(1:5),x= my_vals, pch = 19 )
+legend("topleft",
+       c("Estimate", "Truth"),
+       pch = 19,
+       col = c(mcmcplots::mcmcplotsPalette(1), "black")
+)
+
+# And let's plot out some predictions 
+#  across  from the latent state.
+
+# matrix for predictions.
+#  intercept and slope.
+for_pred <- cbind(1, seq(-2,2, 0.01))
+
+# The log-offset I supplied to JAGS
+my_log_offset <- my_data$cell_area
+
+# get mcmc samples for latent state terms
+#  intmm = integrated mcmc samples
+latent_parms <- intmm[,c("beta[1]", "beta[2]")] 
+
+# predictions on cloglog scale
+my_preds <- latent_parms %*% t(for_pred) + my_log_offset
+
+# inverse cloglog to convert to probability
+my_preds <- 1 - exp(-exp(my_preds))
+
+# get quantiles for plotting
+my_preds <- apply(
+  my_preds,
+  2,
+  quantile,
+  probs = c(0.025,0.5,0.975)
+)
+
+plot(
+  my_preds[2,] ~ for_pred[,2],
+  type = "l",
+  lwd = 3,
+  ylim = c(0,1),
+  xlab = "Environmental covariate",
+  ylab = "Pr(Occupancy)",
+  las = 1,
+  bty = "l"
+)
+lines(my_preds[1,] ~ for_pred[,2],lty =2, lwd = 2)
+lines(my_preds[3,] ~ for_pred[,2],lty =2, lwd = 2)
+
+legend("topleft", c("Median estimate", "95% CI"), lty = c(1,2), lwd = c(3,2),
+       bty = "n", cex = 1.3)
 
 
 
