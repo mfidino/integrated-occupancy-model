@@ -42,7 +42,7 @@ model{
     ones[po] ~ dbern(
       exp(
         log(lambda[po_pixel[po]]*b[po_pixel[po]]) -
-          log(po_denominator)
+          po_denominator
       ) / CONSTANT
     )
   } 
